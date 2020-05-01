@@ -11,7 +11,7 @@ import util
 
 def get_border(graph, sigma, max_ratio, min_width, bin_size=50, pad=1000):
 	'''Calculate the urban area border of the input graph. Note that the function expects variable
-	   graph to contain two atributes named 'x' and 'y' associated to the spatial position of the nodes.
+	   `graph` to contain two atributes named 'x' and 'y' associated to the spatial position of the nodes.
 
        Parameters:
        -----------
@@ -71,7 +71,7 @@ def get_border(graph, sigma, max_ratio, min_width, bin_size=50, pad=1000):
 
 		region_f = img_lab==(ind+1)
 		
-		_,contours,hierarchy = cv2.findContours(region_f.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+		contours, hierarchy = cv2.findContours(region_f.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
 		contourTemp = [item[0] for item in contours[0]]
 		contourTemp = np.array(contourTemp)
@@ -128,6 +128,7 @@ def plot_border(graph, subgraph, border, ax=None):
 	ax.yaxis.set_visible(False)
 	ax.set_xlim([np.min(pos_array[:,0]),np.max(pos_array[:,0])])
 	ax.set_ylim([np.min(pos_array[:,1]),np.max(pos_array[:,1])])	
+	plt.show()
 
 	
 def extract_subgraph(graph, border):
@@ -145,15 +146,15 @@ def extract_subgraph(graph, border):
 		#if pol.isInside(pos[0],pos[1]):
 			inside_nodes.append(node)
 
-	subgraph = graph.subgraph(inside_nodes).copy()
-	subgraph = max(nx.strongly_connected_component_subgraphs(subgraph, copy=True), key=len)	
+	graph_inside = graph.subgraph(inside_nodes).copy()
+	con_nodes = max(nx.strongly_connected_components(graph_inside), key=len)
+	subgraph = graph_inside.subgraph(con_nodes)
+
 	
 	return subgraph
 	
 # Example usage
 if __name__=='__main__':
-
-	cityName = "Sao Carlos, SP, Brazil"	
 
 	sigma = 1000		# Standard deviation (in meters) used for the gaussian kernel
 	max_ratio = 0.2		# Threshold used for defining high density regions (relative to maximum)
@@ -161,8 +162,12 @@ if __name__=='__main__':
 	bin_size = 50		# Size of bins (in meters) used for kernel density estimation (lower is better but uses more memory)
 	pad = 1000			# Padding amount (in meters) to add around city map
 
+	city_center = (-22.5838, -47.4097)     # Limeira, São Paulo, Brazil
+
 	# Load a graph that was saved using the save_graphml() osmnx function
-	cityNetworkProj = ox.load_graphml('%s.graphml'%cityName, '../')
+	#cityNetworkProj = ox.load_graphml('%s.graphml'%cityName, '../')
+	cityNetwork = ox.graph_from_point(city_center, distance=10000)
+	cityNetworkProj = ox.project_graph(cityNetwork)
 	cityBorder = get_border(cityNetworkProj, sigma, max_ratio, min_width, bin_size, pad)
 	
 	cityNetworkSubgraph = extract_subgraph(cityNetworkProj, cityBorder)
